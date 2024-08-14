@@ -6,19 +6,41 @@ import {
   User,
   UserEdit,
 } from 'iconsax-react-native';
-import React, { useState } from 'react';
-import { Text, View } from 'react-native';
-import { TouchableOpacity } from 'react-native-gesture-handler';
-import { Input, Spacer } from '../../components';
-import { colors } from '../../contants/colors';
-import { navigationRef } from '../../navigations/RootNavigation';
-import { styles } from './Login';
+import React, {useState} from 'react';
+import {ActivityIndicator, Text, ToastAndroid, View} from 'react-native';
+import {TouchableOpacity} from 'react-native-gesture-handler';
+import {register} from '../../apis/auth';
+import {Input, Spacer} from '../../components';
+import {colors} from '../../contants/colors';
+import {navigationRef} from '../../navigations/RootNavigation';
+import {styles} from './Login';
 
 export default function Register() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullname, setFullname] = useState('');
   const [isShowPass, setIsShowPass] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRegister = () => {
+    if (!username || !password || !fullname) {
+      ToastAndroid.show('Please fill all fields', 500);
+      return;
+    }
+
+    setIsLoading(true);
+
+    register({username, password, fullname})
+      .then(() => {
+        setIsLoading(false);
+        ToastAndroid.show('Registration successful', 500);
+        navigationRef.navigate('login');
+      })
+      .catch(() => {
+        setIsLoading(false);
+        ToastAndroid.show('Registration failed', 500);
+      });
+  };
 
   return (
     <View style={styles.container}>
@@ -92,8 +114,15 @@ export default function Register() {
       </View>
 
       <View>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Sign up</Text>
+        <TouchableOpacity
+          disabled={isLoading}
+          style={styles.button}
+          onPress={handleRegister}>
+          {isLoading ? (
+            <ActivityIndicator size={22} color={colors.white} />
+          ) : (
+            <Text style={styles.buttonText}>Sign up</Text>
+          )}
         </TouchableOpacity>
         <Spacer size={{height: 12}} />
         <Text style={styles.commonText}>

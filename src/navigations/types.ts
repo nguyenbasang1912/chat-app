@@ -1,6 +1,8 @@
 export type RootParamsList = {
   login: undefined;
   register: undefined;
-  chat: undefined;
+  chat: {
+    userId: string;
+  };
   home: undefined;
 };
