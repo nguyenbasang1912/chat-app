@@ -1,7 +1,3 @@
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
-import React, {useState} from 'react';
-import {colors} from '../../contants/colors';
-import {Input, Spacer} from '../../components';
 import {
   CloseCircle,
   Eye,
@@ -9,12 +5,49 @@ import {
   ShieldSecurity,
   User,
 } from 'iconsax-react-native';
+import React, {useState} from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {Input, Spacer} from '../../components';
+import {colors} from '../../contants/colors';
 import {navigationRef} from '../../navigations/RootNavigation';
+import {useAppDispatch, useAppSelector} from '../../store/store';
+import {loginThunk} from '../../store/thunks/auth';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isShowPass, setIsShowPass] = useState(false);
+
+  const {loading} = useAppSelector(state => state.auth.status);
+
+  const dispatch = useAppDispatch();
+
+  const handleLogin = () => {
+    if (!username || !password) {
+      ToastAndroid.show('Please enter a username and password', 500);
+      return;
+    }
+
+    dispatch(loginThunk({username, password}))
+      .unwrap()
+      .then(res => {
+        ToastAndroid.show('Login successful', 500);
+        navigationRef.reset({
+          index: 0,
+          routes: [{name: 'home'}],
+        });
+      })
+      .catch(err => {
+        ToastAndroid.show('Login failed: ' + err.message, 500);
+      });
+  };
 
   return (
     <View style={styles.container}>
@@ -68,9 +101,14 @@ export default function Login() {
 
       <View>
         <TouchableOpacity
+          disabled={loading}
           style={styles.button}
-          onPress={() => navigationRef.navigate('home')}>
-          <Text style={styles.buttonText}>Login</Text>
+          onPress={handleLogin}>
+          {loading ? (
+            <ActivityIndicator size={22} color={colors.white} />
+          ) : (
+            <Text style={styles.buttonText}>Login</Text>
+          )}
         </TouchableOpacity>
         <Spacer size={{height: 12}} />
         <Text style={styles.commonText}>
