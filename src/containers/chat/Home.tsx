@@ -1,5 +1,5 @@
-import {Box, UserSearch} from 'iconsax-react-native';
-import React, {useCallback, useState} from 'react';
+import {Logout, UserSearch} from 'iconsax-react-native';
+import React, {useCallback, useContext, useEffect, useState} from 'react';
 import {
   FlatList,
   ListRenderItemInfo,
@@ -8,37 +8,57 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {logout} from '../../apis/auth';
 import {Input, Row, Spacer} from '../../components';
 import {colors} from '../../contants/colors';
 import {navigationRef} from '../../navigations/RootNavigation';
+import {logout as logoutAction} from '../../store/slices/auth';
+import {useAppDispatch, useAppSelector} from '../../store/store';
+import {getAllUsersThunk} from '../../store/thunks/users';
+import {SocketContext} from '../../contexts/SocketContext';
+import {resetListUsers} from '../../store/slices/users';
 
 export default function Home() {
   const [search, setSearch] = useState('');
-  const [users, setUsers] = useState([]);
+  const dispatch = useAppDispatch();
+  const {page, users} = useAppSelector(state => state.user);
+  const {fullname} = useAppSelector(state => state.auth.user);
+  const {socketInstance} = useContext(SocketContext);
+
+  useEffect(() => {
+    socketInstance?.connect();
+    dispatch(getAllUsersThunk({page: 1}));
+  }, []);
 
   const renderUser = useCallback(
-    ({item, index}: ListRenderItemInfo<any>) => {
+    ({
+      item,
+      index,
+    }: ListRenderItemInfo<{
+      _id: string;
+      username: string;
+      fullname: string;
+      fcm_token: string;
+    }>) => {
       return (
         <TouchableOpacity
           onPress={() => {
             if (navigationRef.isReady()) {
-              navigationRef.navigate('chat');
+              navigationRef.navigate('chat', {
+                userId: item._id,
+                fcmToken: item.fcm_token,
+              });
             }
           }}>
           <Row>
             <View style={styles.avatar}>
               <Text style={styles.fullname} numberOfLines={1}>
-                {index}
+                {`${item.fullname.at(0)?.toUpperCase()}`}
               </Text>
             </View>
             <Spacer size={{width: 12}} />
             <View>
-              <Text style={styles.name}>{index}</Text>
-
-              <Text
-                style={[styles.message, index % 2 === 0 && styles.seenMessage]}>
-                message...
-              </Text>
+              <Text style={styles.name}>{item.fullname}</Text>
             </View>
           </Row>
         </TouchableOpacity>
@@ -47,13 +67,34 @@ export default function Home() {
     [users],
   );
 
+  const handleLoadUsers = async () => {
+    if (page.hasNextPage) {
+      dispatch(getAllUsersThunk({page: page.currentPage + 1}));
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Row padding={16} justify="space-between" style={styles.header}>
         <Text>
-          Hello, <Text style={styles.name}>Sang</Text>
+          Hello, <Text style={styles.name}>{fullname}</Text>
         </Text>
-        <Box size={22} color={colors.black} />
+        <TouchableOpacity
+          onPress={() => {
+            logout()
+              .then(() => {
+                dispatch(logoutAction());
+                navigationRef.reset({
+                  index: 0,
+                  routes: [{name: 'login'}],
+                });
+                socketInstance?.disconnect();
+                dispatch(resetListUsers());
+              })
+              .catch(console.log);
+          }}>
+          <Logout size={22} color={colors.black} />
+        </TouchableOpacity>
       </Row>
 
       <Spacer size={{height: 12}} />
@@ -72,11 +113,12 @@ export default function Home() {
         />
 
         <FlatList
-          data={new Array(10)}
+          data={users}
           renderItem={renderUser}
           keyExtractor={(item, index) => index.toString()}
           contentContainerStyle={styles.containerListUser}
-          // style={{flex: 1}}
+          onEndReachedThreshold={0.2}
+          onEndReached={handleLoadUsers}
           ItemSeparatorComponent={() => {
             return <Spacer size={{height: 12}} />;
           }}
