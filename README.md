@@ -2,7 +2,7 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 # Demo 
 
-[![Watch the video](https://img.youtube.com/vi/nTQUwghvy5Q/default.jpg)](https://www.youtube.com/watch?v=MzUYSECjrzI)
+[![Watch the video](https://img.youtube.com/vi/MzUYSECjrzI/default.jpg)](https://www.youtube.com/watch?v=MzUYSECjrzI)
 
 
 # Getting Started
