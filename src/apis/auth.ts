@@ -4,6 +4,8 @@ import {
   LoginResponse,
   RegisterBody,
   RegisterResponse,
+  RenewTokensResponse,
+  UpdateFcmResponse,
 } from './types/auth';
 
 const login = async (body: LoginBody) => {
@@ -17,4 +19,22 @@ const register = async (body: RegisterBody) => {
   );
 };
 
-export {login, register};
+const updateFcm = async (body: {fcmToken: string}) => {
+  return await http.post<{fcmToken: string}, UpdateFcmResponse>(
+    '/api/auth/update-fcm',
+    body,
+  );
+};
+
+const logout = async () => {
+  return await http.post('/api/auth/logout');
+};
+
+const renewTokens = async (body: {refreshToken: string}) => {
+  return await http.post<{refreshToken: string}, RenewTokensResponse>(
+    '/api/auth/renew-tokens',
+    body,
+  );
+};
+
+export {login, register, updateFcm, logout, renewTokens};

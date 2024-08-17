@@ -11,6 +11,7 @@ export interface GetAllUsersResponse extends Response {
       _id: string;
       username: string;
       fullname: string;
+      fcm_token: string;
     }[],
     page: {
       currentPage: number,

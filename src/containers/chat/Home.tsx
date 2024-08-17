@@ -1,4 +1,4 @@
-import {Box, UserSearch} from 'iconsax-react-native';
+import {Logout, UserSearch} from 'iconsax-react-native';
 import React, {useCallback, useContext, useEffect, useState} from 'react';
 import {
   FlatList,
@@ -8,19 +8,25 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {logout} from '../../apis/auth';
 import {Input, Row, Spacer} from '../../components';
 import {colors} from '../../contants/colors';
 import {navigationRef} from '../../navigations/RootNavigation';
+import {logout as logoutAction} from '../../store/slices/auth';
 import {useAppDispatch, useAppSelector} from '../../store/store';
 import {getAllUsersThunk} from '../../store/thunks/users';
+import {SocketContext} from '../../contexts/SocketContext';
+import {resetListUsers} from '../../store/slices/users';
 
 export default function Home() {
   const [search, setSearch] = useState('');
   const dispatch = useAppDispatch();
   const {page, users} = useAppSelector(state => state.user);
   const {fullname} = useAppSelector(state => state.auth.user);
+  const {socketInstance} = useContext(SocketContext);
 
   useEffect(() => {
+    socketInstance?.connect();
     dispatch(getAllUsersThunk({page: 1}));
   }, []);
 
@@ -32,12 +38,16 @@ export default function Home() {
       _id: string;
       username: string;
       fullname: string;
+      fcm_token: string;
     }>) => {
       return (
         <TouchableOpacity
           onPress={() => {
             if (navigationRef.isReady()) {
-              navigationRef.navigate('chat', {userId: item._id});
+              navigationRef.navigate('chat', {
+                userId: item._id,
+                fcmToken: item.fcm_token,
+              });
             }
           }}>
           <Row>
@@ -49,17 +59,12 @@ export default function Home() {
             <Spacer size={{width: 12}} />
             <View>
               <Text style={styles.name}>{item.fullname}</Text>
-
-              <Text
-                style={[styles.message, index % 2 === 0 && styles.seenMessage]}>
-                message...
-              </Text>
             </View>
           </Row>
         </TouchableOpacity>
       );
     },
-    [],
+    [users],
   );
 
   const handleLoadUsers = async () => {
@@ -74,7 +79,22 @@ export default function Home() {
         <Text>
           Hello, <Text style={styles.name}>{fullname}</Text>
         </Text>
-        <Box size={22} color={colors.black} />
+        <TouchableOpacity
+          onPress={() => {
+            logout()
+              .then(() => {
+                dispatch(logoutAction());
+                navigationRef.reset({
+                  index: 0,
+                  routes: [{name: 'login'}],
+                });
+                socketInstance?.disconnect();
+                dispatch(resetListUsers());
+              })
+              .catch(console.log);
+          }}>
+          <Logout size={22} color={colors.black} />
+        </TouchableOpacity>
       </Row>
 
       <Spacer size={{height: 12}} />

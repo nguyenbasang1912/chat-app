@@ -9,18 +9,14 @@ type SocketQuery = {
 const BASE_URL = 'http://192.168.1.21:8000/';
 
 class SocketIO {
-  static socket: Socket | null = null;
+  socket: Socket | undefined = undefined;
 
-  static getInstance(query: SocketQuery) {
-    if (!this.socket) {
-      this.socket = io(BASE_URL, {
-        query,
-        reconnection: true,
-        reconnectionAttempts: 500
-      });
-    }
-
-    return this.socket;
+  constructor(query: SocketQuery) {
+    this.socket = io(BASE_URL, {
+      query,
+      reconnection: true,
+      reconnectionAttempts: 500,
+    });
   }
 }
 

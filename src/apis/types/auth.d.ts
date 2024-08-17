@@ -26,10 +26,19 @@ export interface LoginResponse extends Response {
       userId: string;
       username: string;
       fullname: string;
+      fcmToken: string;
     };
     tokens: {
       accessToken: string;
       refreshToken: string;
     };
   };
+}
+
+export interface UpdateFcmResponse extends Response {
+  data: string;
+}
+
+export interface RenewTokensResponse extends Response {
+  data: LoginResponse['data']['tokens'];
 }

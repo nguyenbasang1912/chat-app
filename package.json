@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@notifee/react-native": "^7.8.2",
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-firebase/app": "^20.4.0",
     "@react-native-firebase/messaging": "^20.4.0",
     "@react-navigation/native": "^6.1.18",
@@ -25,7 +26,9 @@
     "react-native-screens": "^3.34.0",
     "react-native-svg": "^15.5.0",
     "react-native-toast-message": "^2.2.0",
+    "react-native-uuid": "^2.0.2",
     "react-redux": "^9.1.2",
+    "redux-persist": "^6.0.0",
     "socket.io-client": "^4.7.5"
   },
   "devDependencies": {

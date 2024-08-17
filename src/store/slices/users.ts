@@ -8,6 +8,7 @@ type UsersType = {
     _id: string;
     fullname: string;
     username: string;
+    fcm_token: string;
   }[];
   page: GetAllUsersResponse['data']['page'];
 };

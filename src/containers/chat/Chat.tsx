@@ -34,6 +34,7 @@ interface Room {
     fullname: string;
     username: string;
     isOnline: boolean;
+    fcm_token: string;
   }[];
 }
 
@@ -51,14 +52,18 @@ export default function Chat(props: StackScreenProps<RootParamsList, 'chat'>) {
   const [listMessages, setListMessages] = useState<Message[]>([]);
   const [partner, setPartner] = useState<Room['members'][number]>();
   const {socketInstance} = useContext(SocketContext);
-  const {userId} = useAppSelector(state => state.auth.user);
+  const {userId, fcmToken} = useAppSelector(state => state.auth.user);
   const roomRef = useRef<Room>();
+  const countMessagesInSession = useRef<number>();
+  const partnerFcmToken = useRef<string>();
   const messagePageRef = useRef<GetMessagesResponse['data']['page']>();
   const members = useMemo(() => {
     return [userId, props.route.params.userId];
   }, [props.route.params.userId]);
 
   useEffect(() => {
+    partnerFcmToken.current = props.route.params.fcmToken;
+
     if (socketInstance) {
       socketInstance.emit('join room', members);
 
@@ -68,11 +73,11 @@ export default function Chat(props: StackScreenProps<RootParamsList, 'chat'>) {
         setPartner(partner);
         getListMessages({
           page: 1,
-          limit: 10,
           roomId: roomRef.current?._id,
         }).then(res => {
           setListMessages(res.data.messages);
           messagePageRef.current = res.data.page;
+          countMessagesInSession.current = 0;
         });
       });
 
@@ -80,6 +85,13 @@ export default function Chat(props: StackScreenProps<RootParamsList, 'chat'>) {
         setListMessages(prev => {
           return [message, ...prev];
         });
+        countMessagesInSession.current = countMessagesInSession.current
+          ? countMessagesInSession.current + 1
+          : 1;
+      });
+
+      socketInstance.on('partner update fcm', fcm => {
+        partnerFcmToken.current = fcm;
       });
     }
 
@@ -88,9 +100,57 @@ export default function Chat(props: StackScreenProps<RootParamsList, 'chat'>) {
         socketInstance?.emit('leave room', roomRef.current._id.toString());
         socketInstance?.off('get room');
         socketInstance?.off('message');
+        socketInstance?.off('partner update fcm');
       }
     };
   }, [members, socketInstance]);
+
+  useEffect(() => {
+    if (socketInstance) {
+      socketInstance.on('partner offline', (partnerId: string) => {
+        if (!partner) {
+          return;
+        }
+
+        if (partnerId !== partner._id) {
+          return;
+        }
+
+        setPartner(prev => {
+          if (prev) {
+            return {
+              ...prev,
+              isOnline: false,
+            };
+          }
+        });
+      });
+
+      socketInstance.on('partner reconnect', (partnerId: string) => {
+        if (!partner) {
+          return;
+        }
+
+        if (partnerId !== partner._id) {
+          return;
+        }
+
+        setPartner(prev => {
+          if (prev) {
+            return {
+              ...prev,
+              isOnline: true,
+            };
+          }
+        });
+      });
+    }
+
+    return () => {
+      socketInstance?.off('partner offline');
+      socketInstance?.off('partner reconnect');
+    };
+  }, [socketInstance, partner]);
 
   const renderMessage = useCallback(
     ({item, index}: ListRenderItemInfo<Message>) => {
@@ -124,6 +184,9 @@ export default function Chat(props: StackScreenProps<RootParamsList, 'chat'>) {
         roomRef.current?._id,
         messsage,
         userId,
+        partner?._id,
+        partnerFcmToken.current,
+        fcmToken,
       );
       setMesssage('');
     } else {
@@ -136,11 +199,10 @@ export default function Chat(props: StackScreenProps<RootParamsList, 'chat'>) {
       if (messagePageRef.current.hasNextPage) {
         getListMessages({
           page: +messagePageRef.current.currentPage + 1,
-          limit: 10,
           roomId: roomRef.current?._id,
+          additionalSkip: countMessagesInSession.current,
         }).then(res => {
           setListMessages(prev => [...prev, ...res.data.messages]);
-          console.log(res.data.page);
           messagePageRef.current = res.data.page;
         });
       }
@@ -162,7 +224,7 @@ export default function Chat(props: StackScreenProps<RootParamsList, 'chat'>) {
           <Spacer size={{width: 12}} />
           <View style={styles.avatar}>
             <Text style={styles.name} numberOfLines={1}>
-              {partner?.fullname.at(0)?.toUpperCase()}
+              {partner?.fullname?.at(0)?.toUpperCase()}
             </Text>
           </View>
           <Spacer size={{width: 12}} />
